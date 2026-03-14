@@ -15,7 +15,9 @@ st.set_page_config(
 # ==========================================
 @st.cache_data
 def carregar_dados():
-    # Dados 1.1: Tabela Completa (Idêntica à sua imagem)
+    # ----------------------------------------
+    # DADOS 1.1: Equipamentos Críticos
+    # ----------------------------------------
     dados_cronograma = pd.DataFrame({
         'TIPO': ['DOCUMENTAÇÃO', 'DOCUMENTAÇÃO', 'EQUIPAMENTO', 'EQUIPAMENTO', 'EQUIPAMENTO', 'EQUIPAMENTO', 'EQUIPAMENTO', 'EQUIPAMENTO', 'EQUIPAMENTO', 'EQUIPAMENTO', 'EQUIPAMENTO'],
         'EQUIPAMENTO': ['ORGANIZAÇÃO PORTAL', 'ORGANIZAÇÃO DA DOCUMENTAÇÃO', 'BOMBA DE INCENDIO', 'TURBINAS + PACOTE', 'COMPRESSORES DE AR', 'VALVULAS CRITICAS', 'BALEEIRAS / TURCOS', 'BOMBAS INJEÇÃO', 'GUINDASTE', 'UPS + DETECTORES', 'GERADOR DE EMERGENCIA'],
@@ -30,36 +32,54 @@ def carregar_dados():
         'STATUS DA ATIVIDADE': ['CONCLUIDO', 'CONCLUIDO', 'CONCLUIDO', 'EM ANDAMENTO', 'PENDENTE', 'PENDENTE', 'PENDENTE', 'PENDENTE', 'PENDENTE', 'PENDENTE', 'PENDENTE']
     })
 
-    # Dados 1.1: Curva S
-    dados_curva_s = pd.DataFrame({
+    dados_curva_s_eqp = pd.DataFrame({
         'Mês': ['Jan/26', 'Fev/26', 'Mar/26', 'Abr/26', 'Mai/26', 'Jun/26', 'Jul/26', 'Ago/26', 'Set/26', 'Out/26', 'Nov/26'],
         'Planejado Acumulado (%)': [2, 7, 17, 30, 39, 52, 62, 71, 83, 96, 100],
         'Realizado Acumulado (%)': [2, 7, 16.5, None, None, None, None, None, None, None, None] 
     })
 
-    # Dados 1.2
-    dados_pdm = pd.DataFrame({
+    # ----------------------------------------
+    # DADOS 1.2: PDM DE MATERIAIS
+    # ----------------------------------------
+    # Tabela Mensal do PDM
+    dados_pdm_mensal = pd.DataFrame({
+        'MÊS': ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO'],
+        'Planejado Mês': [0, 400, 500, 550, 650, 650, 650, 500, 450, 350, 300],
+        'Planejado Acum.': [0, 400, 900, 1450, 2100, 2750, 3400, 3900, 4350, 4700, 5000],
+        'Realizado Mês': [0, 400, None, None, None, None, None, None, None, None, None],
+        'Realizado Acum.': [0, 400, None, None, None, None, None, None, None, None, None],
+        '% Concluído do Projeto': ['0%', '8%', None, None, None, None, None, None, None, None, None],
+        'GAP (Desvio Acumulado)': [0, 0, None, None, None, None, None, None, None, None, None]
+    })
+    
+    # Gráfico Diário do PDM (D-1)
+    dados_pdm_diario = pd.DataFrame({
         'Dia': ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'],
         'Realizado': [120, 145, 130, 160, 155],
         'Meta': [150, 150, 150, 150, 150]
     })
     
-    # Dados 1.3
+    # ----------------------------------------
+    # DADOS 1.3: Barreiras
+    # ----------------------------------------
     dados_barreiras = pd.DataFrame({
         'Status': ['Cadastrados/Revisados', 'Pendentes'],
         'Quantidade': [2100, 4900]
     })
     
-    return dados_cronograma, dados_curva_s, dados_pdm, dados_barreiras
+    return dados_cronograma, dados_curva_s_eqp, dados_pdm_mensal, dados_pdm_diario, dados_barreiras
 
-df_crono, df_curva, df_pdm, df_barreiras = carregar_dados()
+df_crono, df_curva_eqp, df_pdm_mensal, df_pdm_diario, df_barreiras = carregar_dados()
 
-# Função para colorir o status na tabela do Streamlit
-def colorir_status(val):
+# Funções de Formatação Visual das Tabelas
+def colorir_status_crono(val):
     if val == 'CONCLUIDO': return 'background-color: #00cc96; color: black'
     elif val == 'EM ANDAMENTO': return 'background-color: #ffffcc; color: black'
     elif val == 'PENDENTE': return 'background-color: #ffcccb; color: black'
     return ''
+
+# Substitui None por '-' apenas para a visualização na tabela do Streamlit
+df_pdm_mensal_display = df_pdm_mensal.fillna('-')
 
 # ==========================================
 # MENU LATERAL (FILTROS)
@@ -85,14 +105,12 @@ st.header("🎯 1. Metas do Ano")
 # --- 1.1 Cronograma de Equipamentos Críticos ---
 st.subheader("1.1 Equip. Críticos (Peregrino)")
 
-# Parte Superior: Gráficos Lado a Lado (Curva S mais larga, Gauge mais estreito)
 col_graf1, col_graf2 = st.columns([2, 1])
-
 with col_graf1:
     st.markdown("**Curva S - Avanço Físico do Projeto**")
     fig_curva = go.Figure()
-    fig_curva.add_trace(go.Scatter(x=df_curva['Mês'], y=df_curva['Planejado Acumulado (%)'], mode='lines+markers', name='Planejado', line=dict(color='gray', dash='dash')))
-    fig_curva.add_trace(go.Scatter(x=df_curva['Mês'], y=df_curva['Realizado Acumulado (%)'], mode='lines+markers', name='Realizado', line=dict(color='#00cc96', width=3)))
+    fig_curva.add_trace(go.Scatter(x=df_curva_eqp['Mês'], y=df_curva_eqp['Planejado Acumulado (%)'], mode='lines+markers', name='Planejado', line=dict(color='gray', dash='dash')))
+    fig_curva.add_trace(go.Scatter(x=df_curva_eqp['Mês'], y=df_curva_eqp['Realizado Acumulado (%)'], mode='lines+markers', name='Realizado', line=dict(color='#00cc96', width=3)))
     fig_curva.update_layout(height=280, margin=dict(l=10, r=10, t=10, b=10), yaxis_title="% de Avanço", showlegend=True, legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
     st.plotly_chart(fig_curva, use_container_width=True)
 
@@ -115,28 +133,48 @@ with col_graf2:
     fig_gauge.update_layout(height=280, margin=dict(l=10, r=10, t=30, b=10))
     st.plotly_chart(fig_gauge, use_container_width=True)
 
-# Parte Inferior: Tabela ocupando toda a largura
 st.markdown("**Status do Cronograma de Verificação de Documentações**")
-# height=420 garante que as 11 linhas da sua imagem caibam sem criar barra de rolagem interna
-st.dataframe(df_crono.style.applymap(colorir_status, subset=['STATUS DA ATIVIDADE']), use_container_width=True, hide_index=True, height=420)
-
+st.dataframe(df_crono.style.applymap(colorir_status_crono, subset=['STATUS DA ATIVIDADE']), use_container_width=True, hide_index=True, height=420)
 st.divider()
+
 
 # --- 1.2 PDM de Materiais ---
 st.subheader("1.2 PDM de Materiais")
-col_12_A, col_12_B = st.columns([2, 1])
 
-with col_12_A:
-    fig_pdm = go.Figure()
-    fig_pdm.add_trace(go.Bar(x=df_pdm['Dia'], y=df_pdm['Realizado'], name='Realizado', marker_color='#636efa'))
-    fig_pdm.add_trace(go.Scatter(x=df_pdm['Dia'], y=df_pdm['Meta'], name='Meta Diária', line=dict(color='red', width=2)))
-    fig_pdm.update_layout(height=250, margin=dict(l=10, r=10, t=10, b=10), showlegend=True, legend=dict(yanchor="top", y=1.2, xanchor="left", x=0))
-    st.plotly_chart(fig_pdm, use_container_width=True)
+# Parte 1: Gráficos Mensais (Lado a Lado)
+col_pdm_1, col_pdm_2 = st.columns(2)
 
-with col_12_B:
-    st.info("💡 **Espaço Reservado:** PDM.")
+with col_pdm_1:
+    st.markdown("**Curva S - Avanço Acumulado do PDM**")
+    fig_curva_pdm = go.Figure()
+    fig_curva_pdm.add_trace(go.Scatter(x=df_pdm_mensal['MÊS'], y=df_pdm_mensal['Planejado Acum.'], mode='lines+markers', name='Planejado Acum.', line=dict(color='gray', dash='dash')))
+    # Usei o tom roxo/azul para destacar que é PDM e diferenciar do verde dos equipamentos
+    fig_curva_pdm.add_trace(go.Scatter(x=df_pdm_mensal['MÊS'], y=df_pdm_mensal['Realizado Acum.'], mode='lines+markers', name='Realizado Acum.', line=dict(color='#636efa', width=3)))
+    fig_curva_pdm.update_layout(height=300, margin=dict(l=10, r=10, t=10, b=10), yaxis_title="Quantitativo de Materiais", showlegend=True, legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
+    st.plotly_chart(fig_curva_pdm, use_container_width=True)
+
+with col_pdm_2:
+    st.markdown("**Acompanhamento Mensal (Planejado vs Realizado)**")
+    fig_barras_pdm = go.Figure()
+    fig_barras_pdm.add_trace(go.Bar(x=df_pdm_mensal['MÊS'], y=df_pdm_mensal['Planejado Mês'], name='Planejado Mês', marker_color='#b3b3b3'))
+    fig_barras_pdm.add_trace(go.Bar(x=df_pdm_mensal['MÊS'], y=df_pdm_mensal['Realizado Mês'], name='Realizado Mês', marker_color='#636efa'))
+    fig_barras_pdm.update_layout(height=300, margin=dict(l=10, r=10, t=10, b=10), barmode='group', showlegend=True, legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
+    st.plotly_chart(fig_barras_pdm, use_container_width=True)
+
+# Parte 2: Tabela Mensal
+st.markdown("**Tabela de Controle - PDM de Materiais**")
+st.dataframe(df_pdm_mensal_display, use_container_width=True, hide_index=True)
+
+# Parte 3: Acompanhamento Diário
+st.markdown("**Acompanhamento Diário D-1 (Ritmo da Contratada)**")
+fig_pdm_diario = go.Figure()
+fig_pdm_diario.add_trace(go.Bar(x=df_pdm_diario['Dia'], y=df_pdm_diario['Realizado'], name='Realizado Dia', marker_color='#636efa'))
+fig_pdm_diario.add_trace(go.Scatter(x=df_pdm_diario['Dia'], y=df_pdm_diario['Meta'], name='Meta Diária', line=dict(color='red', width=2)))
+fig_pdm_diario.update_layout(height=250, margin=dict(l=10, r=10, t=10, b=10), showlegend=True, legend=dict(yanchor="top", y=1.2, xanchor="left", x=0))
+st.plotly_chart(fig_pdm_diario, use_container_width=True)
 
 st.divider()
+
 
 # --- 1.3 Cronograma de Barreiras de Segurança ---
 st.subheader("1.3 Barreiras (Frota Antiga)")
@@ -149,7 +187,7 @@ with col_13_A:
     st.plotly_chart(fig_donut, use_container_width=True)
 
 with col_13_B:
-    st.info("💡 **Espaço Reservado:** Barreiras.")
+    st.info("💡 **Espaço Reservado:** Tabela ou Gráficos de Barreiras de Segurança.")
 
 st.divider()
 

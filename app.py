@@ -41,7 +41,6 @@ def carregar_dados():
     # ----------------------------------------
     # DADOS 1.2: PDM DE MATERIAIS
     # ----------------------------------------
-    # Tabela Mensal do PDM
     dados_pdm_mensal = pd.DataFrame({
         'MÊS': ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO'],
         'Planejado Mês': [0, 400, 500, 550, 650, 650, 650, 500, 450, 350, 300],
@@ -52,7 +51,6 @@ def carregar_dados():
         'GAP (Desvio Acumulado)': [0, 0, None, None, None, None, None, None, None, None, None]
     })
     
-    # Gráfico Diário do PDM (D-1)
     dados_pdm_diario = pd.DataFrame({
         'Dia': ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'],
         'Realizado': [120, 145, 130, 160, 155],
@@ -71,14 +69,12 @@ def carregar_dados():
 
 df_crono, df_curva_eqp, df_pdm_mensal, df_pdm_diario, df_barreiras = carregar_dados()
 
-# Funções de Formatação Visual das Tabelas
 def colorir_status_crono(val):
     if val == 'CONCLUIDO': return 'background-color: #00cc96; color: black'
     elif val == 'EM ANDAMENTO': return 'background-color: #ffffcc; color: black'
     elif val == 'PENDENTE': return 'background-color: #ffcccb; color: black'
     return ''
 
-# Substitui None por '-' apenas para a visualização na tabela do Streamlit
 df_pdm_mensal_display = df_pdm_mensal.fillna('-')
 
 # ==========================================
@@ -141,28 +137,39 @@ st.divider()
 # --- 1.2 PDM de Materiais ---
 st.subheader("1.2 PDM de Materiais")
 
-# Parte 1: Gráficos Mensais (Lado a Lado)
-col_pdm_1, col_pdm_2 = st.columns(2)
+# Parte 1: Gráficos Mensais (Curva S + Gauge de Avanço Total)
+col_pdm_1, col_pdm_2 = st.columns([2, 1])
 
 with col_pdm_1:
     st.markdown("**Curva S - Avanço Acumulado do PDM**")
     fig_curva_pdm = go.Figure()
     fig_curva_pdm.add_trace(go.Scatter(x=df_pdm_mensal['MÊS'], y=df_pdm_mensal['Planejado Acum.'], mode='lines+markers', name='Planejado Acum.', line=dict(color='gray', dash='dash')))
-    # Usei o tom roxo/azul para destacar que é PDM e diferenciar do verde dos equipamentos
     fig_curva_pdm.add_trace(go.Scatter(x=df_pdm_mensal['MÊS'], y=df_pdm_mensal['Realizado Acum.'], mode='lines+markers', name='Realizado Acum.', line=dict(color='#636efa', width=3)))
-    fig_curva_pdm.update_layout(height=300, margin=dict(l=10, r=10, t=10, b=10), yaxis_title="Quantitativo de Materiais", showlegend=True, legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
+    fig_curva_pdm.update_layout(height=280, margin=dict(l=10, r=10, t=10, b=10), yaxis_title="Quantitativo de Materiais", showlegend=True, legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
     st.plotly_chart(fig_curva_pdm, use_container_width=True)
 
 with col_pdm_2:
-    st.markdown("**Acompanhamento Mensal (Planejado vs Realizado)**")
-    fig_barras_pdm = go.Figure()
-    fig_barras_pdm.add_trace(go.Bar(x=df_pdm_mensal['MÊS'], y=df_pdm_mensal['Planejado Mês'], name='Planejado Mês', marker_color='#b3b3b3'))
-    fig_barras_pdm.add_trace(go.Bar(x=df_pdm_mensal['MÊS'], y=df_pdm_mensal['Realizado Mês'], name='Realizado Mês', marker_color='#636efa'))
-    fig_barras_pdm.update_layout(height=300, margin=dict(l=10, r=10, t=10, b=10), barmode='group', showlegend=True, legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
-    st.plotly_chart(fig_barras_pdm, use_container_width=True)
+    st.markdown("**Avanço Total Consolidado**")
+    # Configurado em 8% para refletir os 400 itens concluídos de um total de 5.000
+    fig_gauge_pdm = go.Figure(go.Indicator(
+        mode = "gauge+number",
+        value = 8, 
+        number = {"suffix": "%"},
+        gauge = {
+            'axis': {'range': [None, 100]},
+            'bar': {'color': "#636efa"}, # Cor roxa acompanhando a Curva S do PDM
+            'steps': [
+                {'range': [0, 30], 'color': "#ffcccb"},
+                {'range': [30, 80], 'color': "#ffffcc"},
+                {'range': [80, 100], 'color': "#e0ffe0"}
+            ]
+        }
+    ))
+    fig_gauge_pdm.update_layout(height=280, margin=dict(l=10, r=10, t=30, b=10))
+    st.plotly_chart(fig_gauge_pdm, use_container_width=True)
 
 # Parte 2: Tabela Mensal
-st.markdown("**Tabela de Controle - PDM de Materiais**")
+st.markdown("**Tabela de Controle Mensal - PDM de Materiais**")
 st.dataframe(df_pdm_mensal_display, use_container_width=True, hide_index=True)
 
 # Parte 3: Acompanhamento Diário

@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# PREPARAÇÃO PARA DADOS REAIS
+# PREPARAÇÃO PARA DADOS REAIS 
 # ==========================================
 @st.cache_data
 def carregar_dados():

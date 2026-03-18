@@ -15,9 +15,7 @@ st.set_page_config(
 # ==========================================
 @st.cache_data
 def carregar_dados():
-    # ----------------------------------------
     # DADOS 1.1: Equipamentos Críticos
-    # ----------------------------------------
     dados_cronograma = pd.DataFrame({
         'TIPO': ['DOCUMENTAÇÃO', 'DOCUMENTAÇÃO', 'EQUIPAMENTO', 'EQUIPAMENTO', 'EQUIPAMENTO', 'EQUIPAMENTO', 'EQUIPAMENTO', 'EQUIPAMENTO', 'EQUIPAMENTO', 'EQUIPAMENTO', 'EQUIPAMENTO'],
         'EQUIPAMENTO': ['ORGANIZAÇÃO PORTAL', 'ORGANIZAÇÃO DA DOCUMENTAÇÃO', 'BOMBA DE INCENDIO', 'TURBINAS + PACOTE', 'COMPRESSORES DE AR', 'VALVULAS CRITICAS', 'BALEEIRAS / TURCOS', 'BOMBAS INJEÇÃO', 'GUINDASTE', 'UPS + DETECTORES', 'GERADOR DE EMERGENCIA'],
@@ -38,9 +36,7 @@ def carregar_dados():
         'Realizado Acumulado (%)': [2, 7, 16.5, None, None, None, None, None, None, None, None] 
     })
 
-    # ----------------------------------------
     # DADOS 1.2: PDM DE MATERIAIS
-    # ----------------------------------------
     dados_pdm_mensal = pd.DataFrame({
         'MÊS': ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO'],
         'Planejado Mês': [0, 400, 500, 550, 650, 650, 650, 500, 450, 350, 300],
@@ -57,27 +53,15 @@ def carregar_dados():
         'Meta': [150, 150, 150, 150, 150]
     })
     
-    # ----------------------------------------
     # DADOS 1.3: Barreiras
-    # ----------------------------------------
     dados_barreiras = pd.DataFrame({
         'Status': ['Cadastrados/Revisados', 'Pendentes'],
         'Quantidade': [2100, 4900]
     })
 
-    # ----------------------------------------
-    # DADOS 3: Kanban (Demandas Ad-hoc)
-    # ----------------------------------------
-    dados_kanban = pd.DataFrame({
-        'Tarefa': ['Análise de Válvula Urgente (Plataforma X)', 'Revisão LTM Bomba Y', 'Cotação Emergencial Selo Mecânico', 'Saneamento Código Duplicado (Solic. Operação)'],
-        'Solicitante': ['Manutenção', 'Engenharia', 'Suprimentos', 'Operação'],
-        'Prioridade': ['Alta 🔴', 'Média 🟡', 'Alta 🔴', 'Baixa 🟢'],
-        'Status': ['Em Andamento', 'A Fazer', 'Concluído', 'Em Andamento']
-    })
-    
-    return dados_cronograma, dados_curva_s_eqp, dados_pdm_mensal, dados_pdm_diario, dados_barreiras, dados_kanban
+    return dados_cronograma, dados_curva_s_eqp, dados_pdm_mensal, dados_pdm_diario, dados_barreiras
 
-df_crono, df_curva_eqp, df_pdm_mensal, df_pdm_diario, df_barreiras, df_kanban = carregar_dados()
+df_crono, df_curva_eqp, df_pdm_mensal, df_pdm_diario, df_barreiras = carregar_dados()
 
 def colorir_status_crono(val):
     if val == 'CONCLUIDO': return 'background-color: #00cc96; color: black'
@@ -110,10 +94,8 @@ st.header("🎯 1. Metas do Ano")
 
 # --- 1.1 Cronograma de Equipamentos Críticos ---
 st.subheader("1.1 Equip. Críticos (Peregrino)")
-
 col_graf1, col_graf2 = st.columns([2, 1])
 with col_graf1:
-    st.markdown("**Curva S - Avanço Físico do Projeto**")
     fig_curva = go.Figure()
     fig_curva.add_trace(go.Scatter(x=df_curva_eqp['Mês'], y=df_curva_eqp['Planejado Acumulado (%)'], mode='lines+markers', name='Planejado', line=dict(color='gray', dash='dash')))
     fig_curva.add_trace(go.Scatter(x=df_curva_eqp['Mês'], y=df_curva_eqp['Realizado Acumulado (%)'], mode='lines+markers', name='Realizado', line=dict(color='#00cc96', width=3)))
@@ -121,7 +103,6 @@ with col_graf1:
     st.plotly_chart(fig_curva, use_container_width=True)
 
 with col_graf2:
-    st.markdown("**Avanço Total Consolidado**")
     fig_gauge = go.Figure(go.Indicator(
         mode = "gauge+number", value = 16.5, number = {"suffix": "%"},
         gauge = {'axis': {'range': [None, 100]}, 'bar': {'color': "#2b8cbe"},
@@ -130,16 +111,13 @@ with col_graf2:
     fig_gauge.update_layout(height=280, margin=dict(l=10, r=10, t=30, b=10))
     st.plotly_chart(fig_gauge, use_container_width=True)
 
-st.markdown("**Status do Cronograma de Verificação de Documentações**")
 st.dataframe(df_crono.style.applymap(colorir_status_crono, subset=['STATUS DA ATIVIDADE']), use_container_width=True, hide_index=True, height=420)
 st.divider()
 
 # --- 1.2 PDM de Materiais ---
 st.subheader("1.2 PDM de Materiais")
-
 col_pdm_1, col_pdm_2 = st.columns([2, 1])
 with col_pdm_1:
-    st.markdown("**Curva S - Avanço Acumulado do PDM**")
     fig_curva_pdm = go.Figure()
     fig_curva_pdm.add_trace(go.Scatter(x=df_pdm_mensal['MÊS'], y=df_pdm_mensal['Planejado Acum.'], mode='lines+markers', name='Planejado Acum.', line=dict(color='gray', dash='dash')))
     fig_curva_pdm.add_trace(go.Scatter(x=df_pdm_mensal['MÊS'], y=df_pdm_mensal['Realizado Acum.'], mode='lines+markers', name='Realizado Acum.', line=dict(color='#636efa', width=3)))
@@ -147,7 +125,6 @@ with col_pdm_1:
     st.plotly_chart(fig_curva_pdm, use_container_width=True)
 
 with col_pdm_2:
-    st.markdown("**Avanço Total Consolidado**")
     fig_gauge_pdm = go.Figure(go.Indicator(
         mode = "gauge+number", value = 8, number = {"suffix": "%"},
         gauge = {'axis': {'range': [None, 100]}, 'bar': {'color': "#636efa"},
@@ -156,10 +133,8 @@ with col_pdm_2:
     fig_gauge_pdm.update_layout(height=280, margin=dict(l=10, r=10, t=30, b=10))
     st.plotly_chart(fig_gauge_pdm, use_container_width=True)
 
-st.markdown("**Tabela de Controle Mensal - PDM de Materiais**")
 st.dataframe(df_pdm_mensal_display, use_container_width=True, hide_index=True)
 
-st.markdown("**Acompanhamento Diário D-1 (Ritmo da Contratada)**")
 fig_pdm_diario = go.Figure()
 fig_pdm_diario.add_trace(go.Bar(x=df_pdm_diario['Dia'], y=df_pdm_diario['Realizado'], name='Realizado Dia', marker_color='#636efa'))
 fig_pdm_diario.add_trace(go.Scatter(x=df_pdm_diario['Dia'], y=df_pdm_diario['Meta'], name='Meta Diária', line=dict(color='red', width=2)))
@@ -184,9 +159,7 @@ st.divider()
 # SEÇÃO 2: ROTINAS (DIÁRIAS E SEMANAIS)
 # ==========================================
 st.header("📅 2. Rotinas Operacionais (SLA Semanal)")
-
 r_col1, r_col2, r_col3, r_col4 = st.columns(4)
-
 with r_col1:
     st.metric(label="2.1 MRP (3x/sem)", value="3/3", delta="No prazo", delta_color="normal")
     st.metric(label="2.5 Códigos '6' (2x/sem)", value="1/2", delta="-1 Pendente", delta_color="inverse")
@@ -201,38 +174,89 @@ with r_col4:
 st.divider()
 
 # ==========================================
-# SEÇÃO 3: DEMANDAS FORA DO ESCOPO (KANBAN)
+# SEÇÃO 3: DEMANDAS FORA DO ESCOPO (KANBAN MANUAL)
 # ==========================================
 st.header("🗂️ 3. Solicitações Fora do Escopo (Ad-hoc)")
-st.markdown("Acompanhamento de demandas extras absorvidas pela equipe (Estilo Quadro Kanban).")
+st.markdown("Gerencie as demandas extras da equipe (Atenção: Os dados sumirão se o servidor reiniciar).")
 
-# Criando as 3 colunas do Trello
+# 1. INICIALIZANDO A MEMÓRIA (Session State)
+if 'tarefas_kanban' not in st.session_state:
+    st.session_state['tarefas_kanban'] = [
+        {'id': 1, 'Tarefa': 'Análise de Válvula Urgente', 'Solicitante': 'Manutenção', 'Prioridade': 'Alta 🔴', 'Status': 'Em Andamento'}
+    ]
+    st.session_state['contador_id'] = 2
+
+# Funções para mover e excluir
+def mudar_status(task_id, novo_status):
+    for t in st.session_state['tarefas_kanban']:
+        if t['id'] == task_id:
+            t['Status'] = novo_status
+
+def deletar_tarefa(task_id):
+    st.session_state['tarefas_kanban'] = [t for t in st.session_state['tarefas_kanban'] if t['id'] != task_id]
+
+# 2. FORMULÁRIO PARA ADICIONAR NOVA TAREFA
+with st.expander("➕ Adicionar Nova Solicitação", expanded=False):
+    with st.form("form_nova_tarefa", clear_on_submit=True):
+        f_col1, f_col2, f_col3 = st.columns([2, 1, 1])
+        with f_col1:
+            nova_desc = st.text_input("Descrição da Tarefa*")
+        with f_col2:
+            novo_solic = st.text_input("Solicitante")
+        with f_col3:
+            nova_prior = st.selectbox("Prioridade", ['Baixa 🟢', 'Média 🟡', 'Alta 🔴'])
+        
+        btn_salvar = st.form_submit_button("Salvar")
+        if btn_salvar and nova_desc:
+            nova_tarefa = {
+                'id': st.session_state['contador_id'], 
+                'Tarefa': nova_desc, 
+                'Solicitante': novo_solic, 
+                'Prioridade': nova_prior, 
+                'Status': 'A Fazer'
+            }
+            st.session_state['tarefas_kanban'].append(nova_tarefa)
+            st.session_state['contador_id'] += 1
+            st.rerun() # Atualiza a página imediatamente
+
+# 3. RENDERIZANDO AS COLUNAS DO KANBAN
 k_col1, k_col2, k_col3 = st.columns(3)
 
-# Função auxiliar para desenhar os "Cartões"
-def criar_cartao(tarefa, solicitante, prioridade):
-    with st.container(border=True): # Isso cria o contorno do "Card"
-        st.markdown(f"**{tarefa}**")
-        st.caption(f"👤 Solicitante: {solicitante}")
-        st.caption(f"🏷️ Prioridade: {prioridade}")
+# Função auxiliar para desenhar o Cartão
+def desenhar_cartao(t, col_atual, prox_status, ant_status):
+    with st.container(border=True):
+        st.markdown(f"**{t['Tarefa']}**")
+        st.caption(f"👤 {t['Solicitante']} | {t['Prioridade']}")
+        
+        # Botões de Ação divididos no rodapé do cartão
+        b1, b2, b3 = st.columns(3)
+        with b1:
+            if ant_status and st.button("⏪", key=f"voltar_{t['id']}", help="Mover para trás"):
+                mudar_status(t['id'], ant_status)
+                st.rerun()
+        with b2:
+            if st.button("❌", key=f"del_{t['id']}", help="Excluir tarefa"):
+                deletar_tarefa(t['id'])
+                st.rerun()
+        with b3:
+            if prox_status and st.button("⏩", key=f"avancar_{t['id']}", help="Avançar tarefa"):
+                mudar_status(t['id'], prox_status)
+                st.rerun()
 
-# Desenhando os cartões na coluna "A Fazer"
+# Coluna A Fazer
 with k_col1:
     st.subheader("📋 A Fazer")
-    df_todo = df_kanban[df_kanban['Status'] == 'A Fazer']
-    for index, row in df_todo.iterrows():
-        criar_cartao(row['Tarefa'], row['Solicitante'], row['Prioridade'])
+    for t in [x for x in st.session_state['tarefas_kanban'] if x['Status'] == 'A Fazer']:
+        desenhar_cartao(t, 'A Fazer', 'Em Andamento', None)
 
-# Desenhando os cartões na coluna "Em Andamento"
+# Coluna Em Andamento
 with k_col2:
     st.subheader("⏳ Em Andamento")
-    df_doing = df_kanban[df_kanban['Status'] == 'Em Andamento']
-    for index, row in df_doing.iterrows():
-        criar_cartao(row['Tarefa'], row['Solicitante'], row['Prioridade'])
+    for t in [x for x in st.session_state['tarefas_kanban'] if x['Status'] == 'Em Andamento']:
+        desenhar_cartao(t, 'Em Andamento', 'Concluído', 'A Fazer')
 
-# Desenhando os cartões na coluna "Concluído"
+# Coluna Concluído
 with k_col3:
     st.subheader("✅ Concluído")
-    df_done = df_kanban[df_kanban['Status'] == 'Concluído']
-    for index, row in df_done.iterrows():
-        criar_cartao(row['Tarefa'], row['Solicitante'], row['Prioridade'])
+    for t in [x for x in st.session_state['tarefas_kanban'] if x['Status'] == 'Concluído']:
+        desenhar_cartao(t, 'Concluído', None, 'Em Andamento')

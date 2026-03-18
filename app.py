@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# PREPARAÇÃO PARA DADOS REAIS 
+# PREPARAÇÃO PARA DADOS REAIS
 # ==========================================
 @st.cache_data
 def carregar_dados():
@@ -64,10 +64,20 @@ def carregar_dados():
         'Status': ['Cadastrados/Revisados', 'Pendentes'],
         'Quantidade': [2100, 4900]
     })
-    
-    return dados_cronograma, dados_curva_s_eqp, dados_pdm_mensal, dados_pdm_diario, dados_barreiras
 
-df_crono, df_curva_eqp, df_pdm_mensal, df_pdm_diario, df_barreiras = carregar_dados()
+    # ----------------------------------------
+    # DADOS 3: Kanban (Demandas Ad-hoc)
+    # ----------------------------------------
+    dados_kanban = pd.DataFrame({
+        'Tarefa': ['Análise de Válvula Urgente (Plataforma X)', 'Revisão LTM Bomba Y', 'Cotação Emergencial Selo Mecânico', 'Saneamento Código Duplicado (Solic. Operação)'],
+        'Solicitante': ['Manutenção', 'Engenharia', 'Suprimentos', 'Operação'],
+        'Prioridade': ['Alta 🔴', 'Média 🟡', 'Alta 🔴', 'Baixa 🟢'],
+        'Status': ['Em Andamento', 'A Fazer', 'Concluído', 'Em Andamento']
+    })
+    
+    return dados_cronograma, dados_curva_s_eqp, dados_pdm_mensal, dados_pdm_diario, dados_barreiras, dados_kanban
+
+df_crono, df_curva_eqp, df_pdm_mensal, df_pdm_diario, df_barreiras, df_kanban = carregar_dados()
 
 def colorir_status_crono(val):
     if val == 'CONCLUIDO': return 'background-color: #00cc96; color: black'
@@ -113,18 +123,9 @@ with col_graf1:
 with col_graf2:
     st.markdown("**Avanço Total Consolidado**")
     fig_gauge = go.Figure(go.Indicator(
-        mode = "gauge+number",
-        value = 16.5, 
-        number = {"suffix": "%"},
-        gauge = {
-            'axis': {'range': [None, 100]},
-            'bar': {'color': "#2b8cbe"},
-            'steps': [
-                {'range': [0, 30], 'color': "#ffcccb"},
-                {'range': [30, 80], 'color': "#ffffcc"},
-                {'range': [80, 100], 'color': "#e0ffe0"}
-            ]
-        }
+        mode = "gauge+number", value = 16.5, number = {"suffix": "%"},
+        gauge = {'axis': {'range': [None, 100]}, 'bar': {'color': "#2b8cbe"},
+                 'steps': [{'range': [0, 30], 'color': "#ffcccb"}, {'range': [30, 80], 'color': "#ffffcc"}, {'range': [80, 100], 'color': "#e0ffe0"}]}
     ))
     fig_gauge.update_layout(height=280, margin=dict(l=10, r=10, t=30, b=10))
     st.plotly_chart(fig_gauge, use_container_width=True)
@@ -133,13 +134,10 @@ st.markdown("**Status do Cronograma de Verificação de Documentações**")
 st.dataframe(df_crono.style.applymap(colorir_status_crono, subset=['STATUS DA ATIVIDADE']), use_container_width=True, hide_index=True, height=420)
 st.divider()
 
-
 # --- 1.2 PDM de Materiais ---
 st.subheader("1.2 PDM de Materiais")
 
-# Parte 1: Gráficos Mensais (Curva S + Gauge de Avanço Total)
 col_pdm_1, col_pdm_2 = st.columns([2, 1])
-
 with col_pdm_1:
     st.markdown("**Curva S - Avanço Acumulado do PDM**")
     fig_curva_pdm = go.Figure()
@@ -150,43 +148,28 @@ with col_pdm_1:
 
 with col_pdm_2:
     st.markdown("**Avanço Total Consolidado**")
-    # Configurado em 8% para refletir os 400 itens concluídos de um total de 5.000
     fig_gauge_pdm = go.Figure(go.Indicator(
-        mode = "gauge+number",
-        value = 8, 
-        number = {"suffix": "%"},
-        gauge = {
-            'axis': {'range': [None, 100]},
-            'bar': {'color': "#636efa"}, # Cor roxa acompanhando a Curva S do PDM
-            'steps': [
-                {'range': [0, 30], 'color': "#ffcccb"},
-                {'range': [30, 80], 'color': "#ffffcc"},
-                {'range': [80, 100], 'color': "#e0ffe0"}
-            ]
-        }
+        mode = "gauge+number", value = 8, number = {"suffix": "%"},
+        gauge = {'axis': {'range': [None, 100]}, 'bar': {'color': "#636efa"},
+                 'steps': [{'range': [0, 30], 'color': "#ffcccb"}, {'range': [30, 80], 'color': "#ffffcc"}, {'range': [80, 100], 'color': "#e0ffe0"}]}
     ))
     fig_gauge_pdm.update_layout(height=280, margin=dict(l=10, r=10, t=30, b=10))
     st.plotly_chart(fig_gauge_pdm, use_container_width=True)
 
-# Parte 2: Tabela Mensal
 st.markdown("**Tabela de Controle Mensal - PDM de Materiais**")
 st.dataframe(df_pdm_mensal_display, use_container_width=True, hide_index=True)
 
-# Parte 3: Acompanhamento Diário
 st.markdown("**Acompanhamento Diário D-1 (Ritmo da Contratada)**")
 fig_pdm_diario = go.Figure()
 fig_pdm_diario.add_trace(go.Bar(x=df_pdm_diario['Dia'], y=df_pdm_diario['Realizado'], name='Realizado Dia', marker_color='#636efa'))
 fig_pdm_diario.add_trace(go.Scatter(x=df_pdm_diario['Dia'], y=df_pdm_diario['Meta'], name='Meta Diária', line=dict(color='red', width=2)))
 fig_pdm_diario.update_layout(height=250, margin=dict(l=10, r=10, t=10, b=10), showlegend=True, legend=dict(yanchor="top", y=1.2, xanchor="left", x=0))
 st.plotly_chart(fig_pdm_diario, use_container_width=True)
-
 st.divider()
-
 
 # --- 1.3 Cronograma de Barreiras de Segurança ---
 st.subheader("1.3 Barreiras (Frota Antiga)")
 col_13_A, col_13_B = st.columns([1, 2])
-
 with col_13_A:
     fig_donut = px.pie(df_barreiras, values='Quantidade', names='Status', hole=0.6, color_discrete_sequence=['#19d3f3', '#ef553b'])
     fig_donut.update_traces(textinfo='value+percent')
@@ -195,7 +178,6 @@ with col_13_A:
 
 with col_13_B:
     st.info("💡 **Espaço Reservado:** Tabela ou Gráficos de Barreiras de Segurança.")
-
 st.divider()
 
 # ==========================================
@@ -216,3 +198,41 @@ with r_col3:
     st.metric(label="2.7 Primarização (1x/sem)", value="0/1", delta="-1 Pendente", delta_color="inverse")
 with r_col4:
     st.info("**2.4 Lev. Técnico de Campo**\n\nConsolidado de hoje: Realizado.")
+st.divider()
+
+# ==========================================
+# SEÇÃO 3: DEMANDAS FORA DO ESCOPO (KANBAN)
+# ==========================================
+st.header("🗂️ 3. Solicitações Fora do Escopo (Ad-hoc)")
+st.markdown("Acompanhamento de demandas extras absorvidas pela equipe (Estilo Quadro Kanban).")
+
+# Criando as 3 colunas do Trello
+k_col1, k_col2, k_col3 = st.columns(3)
+
+# Função auxiliar para desenhar os "Cartões"
+def criar_cartao(tarefa, solicitante, prioridade):
+    with st.container(border=True): # Isso cria o contorno do "Card"
+        st.markdown(f"**{tarefa}**")
+        st.caption(f"👤 Solicitante: {solicitante}")
+        st.caption(f"🏷️ Prioridade: {prioridade}")
+
+# Desenhando os cartões na coluna "A Fazer"
+with k_col1:
+    st.subheader("📋 A Fazer")
+    df_todo = df_kanban[df_kanban['Status'] == 'A Fazer']
+    for index, row in df_todo.iterrows():
+        criar_cartao(row['Tarefa'], row['Solicitante'], row['Prioridade'])
+
+# Desenhando os cartões na coluna "Em Andamento"
+with k_col2:
+    st.subheader("⏳ Em Andamento")
+    df_doing = df_kanban[df_kanban['Status'] == 'Em Andamento']
+    for index, row in df_doing.iterrows():
+        criar_cartao(row['Tarefa'], row['Solicitante'], row['Prioridade'])
+
+# Desenhando os cartões na coluna "Concluído"
+with k_col3:
+    st.subheader("✅ Concluído")
+    df_done = df_kanban[df_kanban['Status'] == 'Concluído']
+    for index, row in df_done.iterrows():
+        criar_cartao(row['Tarefa'], row['Solicitante'], row['Prioridade'])

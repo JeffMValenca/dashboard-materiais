@@ -35,9 +35,15 @@ def carregar_dados_planilha():
     crono_bkp = pd.DataFrame({'TIPO': ['EQUIPAMENTO'], 'EQUIPAMENTO': ['EXEMPLO'], 'INICIO': ['01/01/26'], 'FIM': ['10/01/26'], 'FIM REAL': ['-'], 'TOTAL DE DIAS': [10], '% PLANEJADO': ['10%'], '% REALIZADO': ['-'], 'TOTAL DE DOCUMENTOS': ['0'], 'Doc. Já Analisados': ['0'], 'STATUS DA ATIVIDADE': ['PENDENTE']})
     curva_bkp = pd.DataFrame({'Mês': ['Jan/26'], 'Planejado Acumulado (%)': [10], 'Realizado Acumulado (%)': [5]})
     pdm_m_bkp = pd.DataFrame({'MÊS': ['JAN'], 'Planejado Mês': [10], 'Planejado Acum.': [10], 'Realizado Mês': [5], 'Realizado Acum.': [5], '% Concluído do Projeto': ['5%']})
-    # Novo Backup do PDM Diário adequado ao formato mensal
     pdm_d_bkp = pd.DataFrame({'Data': ['01', '02', '03', '04', '05'], 'Meta Diária': [150, 150, 150, 150, 150], 'Realizado Dia': [120, 145, 130, None, None]})
-    barreiras_bkp = pd.DataFrame({'Status': ['Cadastrados', 'Pendentes'], 'Quantidade': [2000, 5000]})
+    
+    # NOVO BACKUP DA ABA BARREIRAS (ATUALIZADO)
+    barreiras_bkp = pd.DataFrame({
+        'ATIVO': ['FRADE', 'FORTE', 'BRAVO', 'POLVO'], 
+        "TOTAL DE TAG's": [450, 450, 450, 450],
+        "TOTAL DE TAG's FEITAS": [23, 11, 4, 16],
+        'PERCENTUAL': ['5,11%', '2,44%', '0,89%', '3,56%']
+    })
 
     if not client: return crono_bkp, curva_bkp, pdm_m_bkp, pdm_d_bkp, barreiras_bkp
 
@@ -125,7 +131,7 @@ with col_g2:
     fig_gauge.update_layout(height=280, margin=dict(l=10, r=10, t=30, b=10))
     st.plotly_chart(fig_gauge, use_container_width=True)
 
-st.dataframe(df_crono.fillna('-').style.applymap(colorir_status, subset=['STATUS DA ATIVIDADE']), use_container_width=True, hide_index=True)
+st.dataframe(df_crono.fillna('-').style.map(colorir_status, subset=['STATUS DA ATIVIDADE']), use_container_width=True, hide_index=True)
 st.divider()
 
 # --- 1.2 PDM ---
@@ -152,7 +158,6 @@ st.dataframe(df_pdm_mensal.fillna('-'), use_container_width=True, hide_index=Tru
 st.markdown("**Evolução Diária da Contratada no Mês Atual**")
 fig_pdm_diario = go.Figure()
 fig_pdm_diario.add_trace(go.Bar(x=df_pdm_diario['Data'], y=df_pdm_diario['Realizado Dia'], name='Realizado', marker_color='#636efa'))
-# Usei 'dot' (pontilhado) para a linha de meta diária ficar mais elegante cruzando o mês
 fig_pdm_diario.add_trace(go.Scatter(x=df_pdm_diario['Data'], y=df_pdm_diario['Meta Diária'], name='Meta Diária', line=dict(color='red', width=2, dash='dot')))
 fig_pdm_diario.update_layout(height=300, margin=dict(l=10, r=10, t=10, b=10), xaxis_title="Dias do Mês", showlegend=True, legend=dict(yanchor="top", y=1.2, xanchor="left", x=0))
 st.plotly_chart(fig_pdm_diario, use_container_width=True)
@@ -160,14 +165,33 @@ st.divider()
 
 # --- 1.3 Barreiras ---
 st.subheader("1.3 Barreiras (Frota Antiga)")
+
+# Tratamento para garantir que o Plotly entenda os percentuais (removendo % e convertendo vírgula para ponto)
+df_barreiras['Perc_Num'] = pd.to_numeric(df_barreiras['PERCENTUAL'].astype(str).str.replace('%', '').str.replace(',', '.'), errors='coerce')
+# Ordenando os dados para o gráfico ficar mais bonito
+df_barreiras_ordenado = df_barreiras.sort_values(by='Perc_Num', ascending=False)
+
 col_b1, col_b2 = st.columns([1, 2])
 with col_b1:
-    fig_donut = px.pie(df_barreiras, values='Quantidade', names='Status', hole=0.6, color_discrete_sequence=['#19d3f3', '#ef553b'])
-    fig_donut.update_traces(textinfo='value+percent')
-    fig_donut.update_layout(height=250, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
-    st.plotly_chart(fig_donut, use_container_width=True)
+    # Gráfico de Barras novo
+    fig_bar = px.bar(df_barreiras_ordenado, x='ATIVO', y='Perc_Num', text='PERCENTUAL', 
+                     color_discrete_sequence=['#4169E1'])
+    
+    fig_bar.update_traces(textposition='outside')
+    fig_bar.update_layout(height=250, margin=dict(l=10, r=10, t=20, b=10), showlegend=False,
+                          xaxis_title="Ativos", yaxis_title="Percentual (%)")
+    
+    # Dando espaço extra em cima da barra para o texto não sumir
+    if not df_barreiras_ordenado['Perc_Num'].isna().all():
+        max_val = df_barreiras_ordenado['Perc_Num'].max()
+        fig_bar.update_yaxes(range=[0, max_val + (max_val * 0.3)])
+        
+    st.plotly_chart(fig_bar, use_container_width=True)
+    
 with col_b2:
-    st.dataframe(df_barreiras, use_container_width=True, hide_index=True)
+    # Exibindo a tabela original, removendo apenas a coluna de tratamento (Perc_Num)
+    st.dataframe(df_barreiras.drop(columns=['Perc_Num'], errors='ignore'), use_container_width=True, hide_index=True)
+    
 st.divider()
 
 # --- Rotinas ---

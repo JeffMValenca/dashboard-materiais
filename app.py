@@ -28,46 +28,38 @@ def conectar_google_sheets():
 # ==========================================
 # 2. LEITURA DOS DADOS (GRÁFICOS E TABELAS)
 # ==========================================
-@st.cache_data(ttl=300) # O site guarda a memória por 5 min para não sobrecarregar o Google
+@st.cache_data(ttl=300)
 def carregar_dados_planilha():
     client = conectar_google_sheets()
     
-    # DADOS DE SEGURANÇA (Caso a aba não exista no Google Sheets ainda)
     crono_bkp = pd.DataFrame({'TIPO': ['EQUIPAMENTO'], 'EQUIPAMENTO': ['EXEMPLO'], 'INICIO': ['01/01/26'], 'FIM': ['10/01/26'], 'FIM REAL': ['-'], 'TOTAL DE DIAS': [10], '% PLANEJADO': ['10%'], '% REALIZADO': ['-'], 'TOTAL DE DOCUMENTOS': ['0'], 'Doc. Já Analisados': ['0'], 'STATUS DA ATIVIDADE': ['PENDENTE']})
     curva_bkp = pd.DataFrame({'Mês': ['Jan/26'], 'Planejado Acumulado (%)': [10], 'Realizado Acumulado (%)': [5]})
     pdm_m_bkp = pd.DataFrame({'MÊS': ['JAN'], 'Planejado Mês': [10], 'Planejado Acum.': [10], 'Realizado Mês': [5], 'Realizado Acum.': [5], '% Concluído do Projeto': ['5%']})
-    pdm_d_bkp = pd.DataFrame({'Dia': ['Seg'], 'Realizado': [10], 'Meta': [15]})
+    # Novo Backup do PDM Diário adequado ao formato mensal
+    pdm_d_bkp = pd.DataFrame({'Data': ['01', '02', '03', '04', '05'], 'Meta Diária': [150, 150, 150, 150, 150], 'Realizado Dia': [120, 145, 130, None, None]})
     barreiras_bkp = pd.DataFrame({'Status': ['Cadastrados', 'Pendentes'], 'Quantidade': [2000, 5000]})
 
     if not client: return crono_bkp, curva_bkp, pdm_m_bkp, pdm_d_bkp, barreiras_bkp
 
     try:
         planilha = client.open_by_url(LINK_PLANILHA)
-        
-        # Lendo cada Aba. Substitui células vazias do Excel por None para o Gráfico não quebrar
         df_crono = pd.DataFrame(planilha.worksheet("Cronograma").get_all_records()).replace('', None)
         df_curva = pd.DataFrame(planilha.worksheet("Curva_S").get_all_records()).replace('', None)
         df_pdm_mensal = pd.DataFrame(planilha.worksheet("PDM_Mensal").get_all_records()).replace('', None)
         df_pdm_diario = pd.DataFrame(planilha.worksheet("PDM_Diario").get_all_records()).replace('', None)
         df_barreiras = pd.DataFrame(planilha.worksheet("Barreiras").get_all_records()).replace('', None)
-        
         return df_crono, df_curva, df_pdm_mensal, df_pdm_diario, df_barreiras
     except Exception as e:
-        st.warning(f"⚠️ Algumas abas não foram encontradas ou estão vazias. Crie as abas exatas no Google Sheets. Usando base de teste.")
+        st.warning(f"⚠️ Algumas abas não foram encontradas. Usando base de teste.")
         return crono_bkp, curva_bkp, pdm_m_bkp, pdm_d_bkp, barreiras_bkp
 
 df_crono, df_curva_eqp, df_pdm_mensal, df_pdm_diario, df_barreiras = carregar_dados_planilha()
 
-# CÁLCULO AUTOMÁTICO DOS VELOCÍMETROS
-try:
-    val_crono = pd.to_numeric(df_curva_eqp['Realizado Acumulado (%)'], errors='coerce').dropna().iloc[-1]
-except:
-    val_crono = 0
+try: val_crono = pd.to_numeric(df_curva_eqp['Realizado Acumulado (%)'], errors='coerce').dropna().iloc[-1]
+except: val_crono = 0
 
-try:
-    val_pdm = pd.to_numeric(df_pdm_mensal['% Concluído do Projeto'].astype(str).str.replace('%', ''), errors='coerce').dropna().iloc[-1]
-except:
-    val_pdm = 0
+try: val_pdm = pd.to_numeric(df_pdm_mensal['% Concluído do Projeto'].astype(str).str.replace('%', ''), errors='coerce').dropna().iloc[-1]
+except: val_pdm = 0
 
 # ==========================================
 # 3. KANBAN (FUNÇÕES)
@@ -75,8 +67,7 @@ except:
 def carregar_kanban():
     client = conectar_google_sheets()
     if client:
-        try:
-            return pd.DataFrame(client.open_by_url(LINK_PLANILHA).worksheet("Kanban").get_all_records())
+        try: return pd.DataFrame(client.open_by_url(LINK_PLANILHA).worksheet("Kanban").get_all_records())
         except: pass
     return pd.DataFrame(columns=["ID", "Tarefa", "Solicitante", "Prioridade", "Status"])
 
@@ -157,10 +148,13 @@ with col_p2:
 
 st.dataframe(df_pdm_mensal.fillna('-'), use_container_width=True, hide_index=True)
 
+# ---- NOVO GRÁFICO PDM DIÁRIO (MENSALIZADO) ----
+st.markdown("**Evolução Diária da Contratada no Mês Atual**")
 fig_pdm_diario = go.Figure()
-fig_pdm_diario.add_trace(go.Bar(x=df_pdm_diario['Dia'], y=df_pdm_diario['Realizado'], name='Realizado Dia', marker_color='#636efa'))
-fig_pdm_diario.add_trace(go.Scatter(x=df_pdm_diario['Dia'], y=df_pdm_diario['Meta'], name='Meta Diária', line=dict(color='red', width=2)))
-fig_pdm_diario.update_layout(height=250, margin=dict(l=10, r=10, t=10, b=10), showlegend=True, legend=dict(yanchor="top", y=1.2, xanchor="left", x=0))
+fig_pdm_diario.add_trace(go.Bar(x=df_pdm_diario['Data'], y=df_pdm_diario['Realizado Dia'], name='Realizado', marker_color='#636efa'))
+# Usei 'dot' (pontilhado) para a linha de meta diária ficar mais elegante cruzando o mês
+fig_pdm_diario.add_trace(go.Scatter(x=df_pdm_diario['Data'], y=df_pdm_diario['Meta Diária'], name='Meta Diária', line=dict(color='red', width=2, dash='dot')))
+fig_pdm_diario.update_layout(height=300, margin=dict(l=10, r=10, t=10, b=10), xaxis_title="Dias do Mês", showlegend=True, legend=dict(yanchor="top", y=1.2, xanchor="left", x=0))
 st.plotly_chart(fig_pdm_diario, use_container_width=True)
 st.divider()
 

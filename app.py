@@ -61,8 +61,12 @@ def carregar_dados_planilha():
 
 df_crono, df_curva_eqp, df_pdm_mensal, df_pdm_diario, df_barreiras = carregar_dados_planilha()
 
-try: val_crono = pd.to_numeric(df_curva_eqp['Realizado Acumulado (%)'], errors='coerce').dropna().iloc[-1]
-except: val_crono = 0
+# --- CORREÇÃO DO VELOCÍMETRO (SOMA DA COLUNA % REALIZADO) ---
+try: 
+    soma_realizado = df_crono['% REALIZADO'].astype(str).str.replace('%', '').str.replace(',', '.')
+    val_crono = pd.to_numeric(soma_realizado, errors='coerce').sum()
+except: 
+    val_crono = 0
 
 try: val_pdm = pd.to_numeric(df_pdm_mensal['% Concluído do Projeto'].astype(str).str.replace('%', ''), errors='coerce').dropna().iloc[-1]
 except: val_pdm = 0

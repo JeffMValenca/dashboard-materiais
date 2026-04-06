@@ -168,7 +168,7 @@ st.plotly_chart(fig_pdm_diario, use_container_width=True)
 st.divider()
 
 # --- 1.3 Barreiras ---
-st.subheader("1.3 Barreiras (Frota Antiga)")
+st.subheader("1.3 Barreiras de Segurança")
 
 # Tratamento para garantir que o Plotly entenda os percentuais (removendo % e convertendo vírgula para ponto)
 df_barreiras['Perc_Num'] = pd.to_numeric(df_barreiras['PERCENTUAL'].astype(str).str.replace('%', '').str.replace(',', '.'), errors='coerce')
